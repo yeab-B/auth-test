@@ -12,51 +12,63 @@ class AuthController extends Controller
 {
     public function register(Request $request)
     {
-        $request->validate([
-            'name' => 'required|string|max:50',
-            'email' => 'required|email|unique:users',
-            'password' => 'required|min:6|confirmed',
-        ]);
+        try {
+            $request->validate([
+                'name' => 'required|string|max:255',
+                'email' => 'required|string|email|unique:users',
+                'password' => 'required|confirmed|min:6',
+            ]);
 
-        $user = User::create([
-            'name' => $request->name,
-            'email'=> $request->email,
-            'password'=> bcrypt($request->password),
-        ]);
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => bcrypt($request->password),
+            ]);
 
-        return response()->json([
-            'user' => $user,
-            'token' => $user->createToken('api-token')->plainTextToken,
-        ]);
-    }
+            // // Login the user and set HttpOnly cookie
+            Auth::login($user);
+            $request->session()->regenerate();
 
-    public function login(Request $request)
-    {
-        $request->validate([
-            'email'=> 'required|email',
-            'password'=> 'required',
-        ]);
-
-        $user = User::where('email', $request->email)->first();
-
-        if (! $user || ! Hash::check($request->password, $user->password)) {
-            throw ValidationException::withMessages(['email' => ['Invalid credentials.']]);
+            
+            return response()->json([
+                'user' => $user,
+            ]);
+        } catch (\Exception $e) {
+            throw ValidationException::withMessages(['email' => ['The email has already been taken.']]);
         }
-
-        return response()->json([
-            'user' => $user,
-            'token' => $user->createToken('api-token')->plainTextToken,
-        ]);
     }
 
-    public function user(Request $request)
-    {
-        return response()->json($request->user());
+   public function login(Request $request)
+{
+    $request->validate([
+        'email' => 'required|email',
+        'password' => 'required'
+    ]);
+
+    if (!Auth::attempt($request->only('email', 'password'))) {
+        throw ValidationException::withMessages(['email' => ['The credentials are incorrect.']]);
     }
+
+    $request->session()->regenerate();
+
+    return response()->json([
+        'user' => Auth::user(),
+    ]);
+}
+
+  public function index(Request $request)
+{
+    return response()->json([
+        'user' => Auth::user(),
+    ]);
+}
 
     public function logout(Request $request)
     {
-        $request->user()->currentAccessToken()->delete();
+        Auth::guard('web')->logout();
+
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
 
         return response()->json(['message' => 'Logged out']);
     }
