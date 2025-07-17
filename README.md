@@ -17,7 +17,7 @@ nodeChallenge/
     ├── custom-console/
     │   ├── custom-console.js   ← Custom logger (Task 1)
     │   ├── file.js             ← File CLI tool (Task 2)
-    │   └── intern.js           ← (For future tasks)
+    │   └── intern.txt        
     ├── package.json
     └── package-lock.json
 ```
